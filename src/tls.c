@@ -28,14 +28,13 @@
  * extension.  This was created based primarily on Wireshark dissection of a
  * TLS handshake and RFC4366.
  */
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h> /* malloc() */
 #include <string.h> /* strncpy() */
 #include <sys/socket.h>
 #include <sys/types.h>
 #include "tls.h"
-#include "protocol.h"
-#include "logger.h"
 
 #define SERVER_NAME_LEN 256
 #define TLS_HEADER_LEN 5
@@ -53,19 +52,9 @@ static const char tls_alert[] = {
     0x02, 0x28, /* Fatal, handshake failure */
 };
 
-static int parse_tls_header(const uint8_t*, size_t, char **);
+int parse_tls_header(const uint8_t*, size_t, char **);
 static int parse_extensions(const uint8_t*, size_t, char **);
 static int parse_server_name_extension(const uint8_t*, size_t, char **);
-
-static const struct Protocol tls_protocol_st = {
-    .name = "tls",
-    .default_port = 443,
-    .parse_packet = (int (*const)(const char *, size_t, char **))&parse_tls_header,
-    .abort_message = tls_alert,
-    .abort_message_len = sizeof(tls_alert)
-};
-const struct Protocol *const tls_protocol = &tls_protocol_st;
-
 
 /* Parse a TLS packet for the Server Name Indication extension in the client
  * hello handshake, returning the first servername found (pointer to static
@@ -80,7 +69,7 @@ const struct Protocol *const tls_protocol = &tls_protocol_st;
  *  -4   - malloc failure
  *  < -4 - Invalid TLS client hello
  */
-static int
+int
 parse_tls_header(const uint8_t *data, size_t data_len, char **hostname) {
     uint8_t tls_content_type;
     uint8_t tls_version_major;
@@ -102,21 +91,21 @@ parse_tls_header(const uint8_t *data, size_t data_len, char **hostname) {
      * See RFC5246 Appendix E.2
      */
     if (data[0] & 0x80 && data[2] == 1) {
-        debug("Received SSL 2.0 Client Hello which can not support SNI.");
+        // debug("Received SSL 2.0 Client Hello which can not support SNI.");
         return -2;
     }
 
     tls_content_type = data[0];
     if (tls_content_type != TLS_HANDSHAKE_CONTENT_TYPE) {
-        debug("Request did not begin with TLS handshake.");
+        // debug("Request did not begin with TLS handshake.");
         return -5;
     }
 
     tls_version_major = data[1];
     tls_version_minor = data[2];
     if (tls_version_major < 3) {
-        debug("Received SSL %d.%d handshake which can not support SNI.",
-              tls_version_major, tls_version_minor);
+        // debug("Received SSL %d.%d handshake which can not support SNI.",
+        //       tls_version_major, tls_version_minor);
 
         return -2;
     }
@@ -137,7 +126,7 @@ parse_tls_header(const uint8_t *data, size_t data_len, char **hostname) {
         return -5;
     }
     if (data[pos] != TLS_HANDSHAKE_TYPE_CLIENT_HELLO) {
-        debug("Not a client hello");
+        // debug("Not a client hello");
 
         return -5;
     }
@@ -170,7 +159,7 @@ parse_tls_header(const uint8_t *data, size_t data_len, char **hostname) {
     pos += 1 + len;
 
     if (pos == data_len && tls_version_major == 3 && tls_version_minor == 0) {
-        debug("Received SSL 3.0 handshake without extensions");
+        // debug("Received SSL 3.0 handshake without extensions");
         return -2;
     }
 
@@ -230,7 +219,7 @@ parse_server_name_extension(const uint8_t *data, size_t data_len,
             case 0x00: /* host_name */
                 *hostname = malloc(len + 1);
                 if (*hostname == NULL) {
-                    err("malloc() failure");
+                    // err("malloc() failure");
                     return -4;
                 }
 
@@ -239,9 +228,9 @@ parse_server_name_extension(const uint8_t *data, size_t data_len,
                 (*hostname)[len] = '\0';
 
                 return len;
-            default:
-                debug("Unknown server name extension name type: %d",
-                      data[pos]);
+            // default:
+            //     debug("Unknown server name extension name type: %d",
+            //           data[pos]);
         }
         pos += 3 + len;
     }

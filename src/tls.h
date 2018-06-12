@@ -26,8 +26,6 @@
 #ifndef TLS_H
 #define TLS_H
 
-#include "protocol.h"
-
-const struct Protocol *const tls_protocol;
+int parse_tls_header(const uint8_t *data, size_t data_len, char **hostname);
 
 #endif
